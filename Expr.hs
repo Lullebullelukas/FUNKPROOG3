@@ -28,14 +28,14 @@ import Parser hiding (T)
 import qualified Dictionary
 
 data Expr = Num Integer | Var String | Add Expr Expr
-       | Sub Expr Expr | Mul Expr Expr | Div Expr Expr
+       | Sub Expr Expr | Mul Expr Expr | Div Expr Expr | Exp Expr Expr
          deriving Show
 
 type T = Expr
 
-var, num, factor, term, expr :: Parser Expr
+var, num, factor, term, expr, expn :: Parser Expr
 
-term', expr' :: Expr -> Parser Expr
+term', expr', expn' :: Expr -> Parser Expr
 
 var = word >-> Var
 
@@ -47,6 +47,8 @@ mulOp = lit '*' >-> (\_ -> Mul) !
 addOp = lit '+' >-> (\_ -> Add) !
         lit '-' >-> (\_ -> Sub)
 
+expOp = lit '^' >-> (\_ -> Exp)
+
 bldOp e (oper,e') = oper e e'
 
 factor = num !
@@ -54,11 +56,14 @@ factor = num !
          lit '(' -# expr #- lit ')' !
          err "illegal factor"
 
-term' e = mulOp # factor >-> bldOp e #> term' ! return e
-term = factor #> term'
+term' e = mulOp # expn >-> bldOp e #> term' ! return e
+term = expn #> term'
 
 expr' e = addOp # term >-> bldOp e #> expr' ! return e
 expr = term #> expr'
+
+expn' e = expOp # factor >-> bldOp e #> expn' ! return e
+expn = factor #> expn'
 
 parens cond str = if cond then "(" ++ str ++ ")" else str
 
@@ -69,12 +74,14 @@ shw prec (Add t u) = parens (prec>5) (shw 5 t ++ "+" ++ shw 5 u)
 shw prec (Sub t u) = parens (prec>5) (shw 5 t ++ "-" ++ shw 6 u)
 shw prec (Mul t u) = parens (prec>6) (shw 6 t ++ "*" ++ shw 6 u)
 shw prec (Div t u) = parens (prec>6) (shw 6 t ++ "/" ++ shw 7 u)
+shw prec (Exp t u) = parens (prec>7) (shw 6 t ++ "^" ++ shw 7 u)
 
 value :: Expr -> Dictionary.T String Integer -> Integer
 value (Num n) _ = n
 value (Var n) dict = case Dictionary.lookup n dict of
   Nothing -> error $ "Expr.value: undefined variable " ++ n
   Just a -> a
+value (Exp x y) dict = (value x dict) ^ (value y dict)
 value (Add x y) dict = (value x dict) + (value y dict)
 value (Sub x y) dict = (value x dict) - (value y dict)
 value (Mul x y) dict = (value x dict) * (value y dict)
