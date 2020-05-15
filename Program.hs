@@ -7,8 +7,6 @@ newtype T = Program [Statement.T] deriving Show
 
 instance Parse T where
   parse = iter Statement.parse >-> Program 
-  
-  toString :: T -> String
-  toString = shw $ exec 
+  toString (Program stmts) = concatMap (Statement.toString) stmts  
              
 exec (Program stmts) = (Statement.exec) (stmts) (Dictionary.empty) 
