@@ -6,7 +6,7 @@ import qualified Expr
 type T = Statement
 data Statement =
     Assignment String Expr.T | Skip | Begin [Statement] | Read String | Write Expr.T | While Expr.T Statement 
-    | Comment | If Expr.T Statement Statement
+    | Comment [String] | If Expr.T Statement Statement
     deriving Show
 
 assignment = word #- accept ":=" # Expr.parse #- require ";" >-> buildAss
@@ -31,7 +31,8 @@ buildRead v = Read v
 write = accept "write" -# Expr.parse #- require ";" >-> buildWrite
 buildWrite v  = Write v
 
-comment = accept "--" -# iter word #- require "/n" >-> \_ -> Comment
+comment = accept "--" -# iter word #- require "/n" >-> buildComment
+buildComment v = Comment v  
 
 exec :: [T] -> Dictionary.T String Integer -> [Integer] -> [Integer]
 exec [] _ _ = []
@@ -51,21 +52,24 @@ exec ((While cond stmt): stmts) dict input =
 
 exec ((Read string):stmts) dict (i:input) = exec stmts (Dictionary.insert (string,i) dict) input
 exec ((Write expr):stmts) dict input = (Expr.value expr dict):(exec stmts dict input)
-exec (Comment:stmts) dict input = exec stmts dict input
+exec ((Comment strings):stmts) dict input = exec stmts dict input
 
 instance Parse Statement where
-  parse = assignment ! skip ! begin ! if' ! while ! Statement.read ! write 
-  -- toString = ""
+  parse = assignment ! skip ! begin ! if' ! while ! Statement.read ! write ! comment 
+  toString = shw 0 
 
-indent i = concat $ replicate (2*i) " "
-shw :: Integer -> Statement  -> String
-shw int (Assignment name expr) = (indent int) ++ name ++ ":=" ++ (Expr.toString expr) ++ "\n"
-shw int Skip = indent int ++ "skip; \n"
-shw int (Begin stmts) = indent int ++ "begin \n" ++ concatMap (shw (int+1) stmts)
+indent :: Int -> String
+indent i = concat $ replicate (2*i) (" ")
 
+shw :: Int -> Statement  -> String
+shw ind (Assignment name expr) = indent ind ++ name ++ ":=" ++ (Expr.toString expr) ++ "\n"
+shw ind Skip = indent ind ++ "skip;"
+shw ind (Begin stmts) = indent ind ++ "begin \n" ++ concatMap (shw (ind+2)) stmts ++ indent(ind+1) ++ "end \n"  
+shw ind (If cond thenStmts elseStmts) = indent ind ++ "if " ++ (Expr.toString cond) ++ " then \n" ++ (indent (ind+1)) ++ (toString thenStmts) ++ "\n" ++ (indent ind) ++ "else \n" ++ (indent (ind+1)) ++ (toString elseStmts)
+shw ind (While cond stmts) = indent ind ++ "while " ++ (Expr.toString cond) ++ " do \n" ++ (indent (ind+1)) ++ toString stmts 
 
-
-
-
+shw ind (Read string) = indent ind ++ "read " ++ string ++ ";" ++ "\n"
+shw ind (Write expr) = indent ind ++ "write " ++ (Expr.toString expr) ++ "; \n" 
+shw ind (Comment strings) = indent ind ++ "--" ++ (concat strings) ++ "\n"
 
 
