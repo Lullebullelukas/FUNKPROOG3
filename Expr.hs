@@ -70,8 +70,8 @@ parens cond str = if cond then "(" ++ str ++ ")" else str
 shw :: Int -> Expr -> String
 shw prec (Num n) = show n
 shw prec (Var v) = v
-shw prec (Add t u) = parens (prec>5) (shw 5 t ++ "+" ++ shw 5 u)
-shw prec (Sub t u) = parens (prec>5) (shw 5 t ++ "-" ++ shw 6 u)
+shw prec (Add t u) = parens (prec>5) (shw 5 t ++ " + " ++ shw 5 u)
+shw prec (Sub t u) = parens (prec>5) (shw 5 t ++ " - " ++ shw 6 u)
 shw prec (Mul t u) = parens (prec>6) (shw 6 t ++ "*" ++ shw 6 u)
 shw prec (Div t u) = parens (prec>6) (shw 6 t ++ "/" ++ shw 7 u)
 shw prec (Exp t u) = parens (prec>7) (shw 6 t ++ "^" ++ shw 7 u)
@@ -81,10 +81,10 @@ value (Num n) _ = n
 value (Var n) dict = case Dictionary.lookup n dict of
   Nothing -> error $ "Expr.value: undefined variable " ++ n
   Just a -> a
-value (Exp x y) dict = (value x dict) ^ (value y dict)
-value (Add x y) dict = (value x dict) + (value y dict)
-value (Sub x y) dict = (value x dict) - (value y dict)
-value (Mul x y) dict = (value x dict) * (value y dict)
+value (Exp x y) dict = value x dict ^ value y dict
+value (Add x y) dict = value x dict + value y dict
+value (Sub x y) dict = value x dict - value y dict
+value (Mul x y) dict = value x dict * value y dict
 value (Div x y) dict = case value y dict of
   0 -> error "Expr.value: division by 0"
   _ -> value x dict `div` value y dict
