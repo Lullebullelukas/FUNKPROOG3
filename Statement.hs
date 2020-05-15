@@ -6,7 +6,7 @@ import qualified Expr
 type T = Statement
 data Statement =
     Assignment String Expr.T | Skip | Begin [Statement] | Read String | Write Expr.T | While Expr.T Statement 
-    | Comment [String] | If Expr.T Statement Statement
+    | Comment String | If Expr.T Statement Statement
     deriving Show
 
 assignment = word #- accept ":=" # Expr.parse #- require ";" >-> buildAss
@@ -31,8 +31,7 @@ buildRead v = Read v
 write = accept "write" -# Expr.parse #- require ";" >-> buildWrite
 buildWrite v  = Write v
 
-comment = accept "--" -# iter word #- require "/n" >-> buildComment
-buildComment v = Comment v  
+comment = accept "--" -# (iter (char ? (/= '\n'))) #- require "\n" >-> Comment
 
 exec :: [T] -> Dictionary.T String Integer -> [Integer] -> [Integer]
 exec [] _ _ = []
@@ -47,7 +46,7 @@ exec ((If cond thenStmts elseStmts): stmts) dict input =
 
 exec ((While cond stmt): stmts) dict input = 
     if (Expr.value cond dict)>0
-    then exec ((While cond stmt):stmts) dict input
+    then exec (stmt:(While cond stmt):stmts) dict input
     else exec stmts dict input
 
 exec ((Read string):stmts) dict (i:input) = exec stmts (Dictionary.insert (string,i) dict) input
@@ -70,6 +69,8 @@ shw ind (While cond stmts) = indent ind ++ "while " ++ (Expr.toString cond) ++ "
 
 shw ind (Read string) = indent ind ++ "read " ++ string ++ ";" ++ "\n"
 shw ind (Write expr) = indent ind ++ "write " ++ (Expr.toString expr) ++ "; \n" 
-shw ind (Comment strings) = indent ind ++ "--" ++ (concat strings) ++ "\n"
+shw ind (Comment strings) = indent ind ++ "--" ++ (strings) ++ "\n"
+
+
 
 
