@@ -22,11 +22,14 @@ m -# n = m # n >-> snd
 (#-) :: Parser a -> Parser b -> Parser a
 m #- n = m # n >-> fst 
 
+comment :: Parser String
+comment = accept "--" -# (iter $ char ? ((/='\n'))) #- spaces  
+
 spaces :: Parser String
 spaces = iter $ char ? isSpace
  
 token :: Parser a -> Parser a
-token m = m #- spaces
+token m = m #- spaces #- (iter comment) 
 
 letter :: Parser Char
 letter = char ? isAlpha 

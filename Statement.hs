@@ -32,7 +32,7 @@ write = accept "write" -# Expr.parse #- require ";" >-> buildWrite
 buildWrite = Write
 
 
-comment = accept "--" -# iter (char ? (/= '\n')) #- require "\n" >-> Comment
+-- comment = accept "--" -# iter (char ? (/= '\n')) #- require "\n" >-> Comment
 
 exec :: [T] -> Dictionary.T String Integer -> [Integer] -> [Integer]
 exec [] _ _ = []
@@ -55,14 +55,14 @@ exec ((Write expr):stmts) dict input = (Expr.value expr dict):(exec stmts dict i
 exec ((Comment strings):stmts) dict input = exec stmts dict input
 
 instance Parse Statement where
-  parse = assignment ! skip ! begin ! if' ! while ! Statement.read ! write ! comment 
+  parse = assignment ! skip ! begin ! if' ! while ! Statement.read ! write 
   toString = shw 0 
 
 indent :: Int -> String
 indent i = concat $ replicate (2*i) " "
 
 shw :: Int -> Statement  -> String
-shw ind (Assignment name expr) = indent ind ++ name ++ " := " ++ Expr.toString expr ++ "\n"
+shw ind (Assignment name expr) = indent ind ++ name ++ " := " ++ Expr.toString expr ++ "; \n"
 shw ind Skip = indent ind ++ "skip;"
 shw ind (Begin stmts) = indent ind ++ "begin \n" ++ concatMap (shw (ind+2)) stmts ++ indent(ind+1) ++ "end \n"  
 shw ind (If cond thenStmts elseStmts) = indent ind ++ "if " ++ Expr.toString cond ++ " then \n" ++ indent (ind+1) ++ toString thenStmts ++ "\n" ++ indent ind ++ "else \n" ++ indent (ind+1) ++ toString elseStmts
@@ -70,8 +70,8 @@ shw ind (While cond stmts) = indent ind ++ "while " ++ Expr.toString cond ++ " d
 
 shw ind (Read string) = indent ind ++ "read " ++ string ++ ";" ++ "\n"
 shw ind (Write expr) = indent ind ++ "write " ++ Expr.toString expr ++ "; \n" 
-shw ind (Comment string) = indent ind ++ "--" ++ string ++ "\n"
-
+--shw ind (Comment string) = indent ind ++ "--" ++ string ++ "\n"
+--commented out comments and deleted the call from parse
 
 
 
